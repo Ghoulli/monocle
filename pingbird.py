@@ -1,5 +1,5 @@
-import os
-import sys
+import socket
+import time
 from ping3 import ping, verbose_ping
 
 def cidrNotation(cidr):
@@ -11,20 +11,20 @@ def cidrNotation(cidr):
 def calcOctets(addresses):
     returnArray = ["",""]
     divide = addresses / 256
-    if divide == 1:
+    if divide == 1: #when the subnet is a /24.
         returnArray[0] = 0
         returnArray[1] = 255
         return returnArray
-    elif divide < 1:
+    elif divide < 1: #incase the subnet is a /25 or smaller.
         returnArray[0] = 0
         returnArray[1] = addresses
         return returnArray
-    else:
+    else: #the subnet is a /23 or bigger.
         returnArray[0] = int(divide) - 1
         returnArray[1] = 255
         return returnArray 
     
-def calcSubnet(IPAddress, octetArray):
+def calcEndRange(IPAddress, octetArray): #ugly function, but it works. Does nothing but sets the end of the range to an array and adds the first two host octets to it. Converts it to int.
     subnettedArray = ["","","",""]
     subnettedArray[0] = int(IPAddress[0])
     subnettedArray[1] = int(IPAddress[1])
@@ -42,12 +42,12 @@ def splitIpAddress(IPAddress):
     return result
 
 def calculateAddresses(cidr):
-    default = 256
+    default = 256 #default amount. corrosponding to /24 subnet.
     diff = 24 - cidr
     if diff == 0:
         return default
     elif diff <= 0:
-        positive = diff * -1
+        positive = diff * -1 #makes the negative difference into a positive to do some maths with.
         i = 1
         while i <= positive:
             default = default / 2
@@ -60,32 +60,78 @@ def calculateAddresses(cidr):
             i += 1
         return default
 
-print("What would you like to do?")
-print("[1]Do a pingsweep.")
-print("[2]Do a portscan.")
-print("[3]Do a speedtest.")
-print("[4]Let a ping run indefinitely.")
-print("[5]Let a ping run for X amount of times.")
+def loopAddresses(startIP, endIP):
+    x = int(startIP[3])
+    while int(startIP[2]) < int(endIP[2]) or (int(startIP[2]) == int(endIP[2]) and x <= int(endIP[3])):
+        if x > 255:
+            startIP[2] = str(int(startIP[2]) + 1) #startIP to int to add it up, back to str to get into the array again.
+            x = 0
+        concag = startIP[0] + "." + startIP[1] + "." + startIP[2] + "." + str(x)
+        pingResponse =  ping(concag, timeout=2)
+        if pingResponse == False:
+            print('Host ' + concag + " offline")
+        elif pingResponse == None:
+            print('Host ' + concag + " offline")
+        else:
+            print('Host ' + concag + " is online")
+        x += 1
+    startIP[3] = str(x)      
 
-choiceInput = int(input()) #needed because you're reading a raw interger in the if-statement.
-if choiceInput == 1:
-    print("You have chosen option 1")
+def safeToFile(bool, onlineHosts):
+        print("Would you like to safe the currently online devices to a .txt file?")
+        print("[0] for No, [1] for Yes.")
+        bool = int(input())
+        if bool == 1:
+            fileName = time.ctime()
+            f = open(fileName + ".txt", "x")
+            f.write(onlineHosts)
+            f.close()
+
+def pingsweep():
+    print("You have chosen option [1]")
+    time.sleep(0.5)
     print("What IP-range do you want to ping sweep?")
-    print("Please do it in the following format: 192.168.0.0/24.")
-    pingsweepInput = str(input()) #takes the input as string
-    cidrValue = cidrNotation(pingsweepInput) #gets the CIDR notation, returns as int.
-    if calculateAddresses(cidrValue) == 256: 
+    time.sleep(0.5)
+    print("Please give the IP-range in the following format: 192.168.0.0/24.")
+    time.sleep(0.5)
+    inputSweep = input() #takes the input as string
+    pingsweepInput = str(inputSweep)
+    if pingsweepInput == '':
+        print("No IP-address specified, please do this again.")
+        time.sleep(1)
+        print("==============================================")
+        pingsweep()
+    else:
+        cidrValue = cidrNotation(pingsweepInput) #gets the CIDR notation, returns as int.
         IPAddress = addressToString(pingsweepInput)
         stringArray = splitIpAddress(IPAddress)
         addresses = calculateAddresses(cidrValue)
         octets = calcOctets(addresses)
-        print(IPAddress)
-        print(stringArray)
-        print(octets)
-        print(calcSubnet(stringArray, octets))
+        endRangeIP = calcEndRange(stringArray, octets)
+        loopAddresses(stringArray, endRangeIP)
+        print("The pingsweep has finished. Now returning to the initial menu.")
+        print("==============================================================")
+        time.sleep(3)
+        main()
+
+def main(): #Main function calls the program to run. Needs to stay in main to call main again when a wrong input is given somewhere.
+    print("What would you like to do?")
+    print("[1]Do a pingsweep.")
+    print("[2]Do a portscan.")
+    print("[3]Do a speedtest.")
+    print("[4]Let a ping run indefinitely.")
+    print("[5]Let a ping run for X amount of times.")
+    print("[6]Exit.")
+
+    choiceInput = input() #needed because you're reading a raw interger in the if-statement.
+    if int(choiceInput) == 1:
+        time.sleep(0.5)
+        pingsweep()
+    elif int(choiceInput) == 6:
+        exit
     else:
-        nrOfAddressess = calculateAddresses(cidrValue)
-        print(calcOctets(nrOfAddressess)) 
-        print(nrOfAddressess)
-else:
-    print("The address filled in is invalid, please try again.")
+        print("The option filled in is invalid, please try again.")
+        time.sleep(0.5)
+        main()
+
+main()
