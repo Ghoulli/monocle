@@ -67,7 +67,7 @@ def loopAddresses(startIP, endIP):
             startIP[2] = str(int(startIP[2]) + 1) #startIP to int to add it up, back to str to get into the array again.
             x = 0
         concag = startIP[0] + "." + startIP[1] + "." + startIP[2] + "." + str(x)
-        pingResponse =  ping(concag, timeout=2)
+        pingResponse =  ping(concag, timeout=5)
         if pingResponse == False:
             print('Host ' + concag + " offline")
         elif pingResponse == None:
@@ -114,7 +114,15 @@ def pingsweep():
         time.sleep(3)
         main()
 
-def main(): #Main function calls the program to run. Needs to stay in main to call main again when a wrong input is given somewhere.
+def portScan():
+    print("You have chosen option [2]")
+    time.sleep(0.5)
+    print("What host do you want to scan?")
+    time.sleep(0.5)
+    inputHostScan = input() #takes the host-to-scan input as string
+    
+
+def main(): #Main function calls the program to run. Needs to stay in main to call main again when a wrong input is given somewhere. 
     print("What would you like to do?")
     print("[1]Do a pingsweep.")
     print("[2]Do a portscan.")
